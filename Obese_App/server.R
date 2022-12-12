@@ -7,6 +7,7 @@
 #    http://shiny.rstudio.com/
 #
 
+set.seed(100012)
 
 #Obesity Levels 
 classification <- c("Underweight", "Normal", "Overweight", "Obesity I", "Obesity II", "Obesity III")
@@ -76,6 +77,8 @@ gbm_model <- function(obeseTrain, interaction.depth, n.trees, shrinkage, n.minob
                     tuneGrid = gbmGrid,
                   verbose = FALSE))
 }
+
+
 
 randomforest_model <- function(obeseTrain, mtry){
   tuneGrid = expand.grid(.mtry=seq(5,mtry))
@@ -216,8 +219,9 @@ shinyServer(function(input, output, session) {
     output$train <- renderTable(train_accuracy, align = "c")
     test_accuracy <- logreg_test_accuracy %>%
       bind_rows(boosted_test_accuracy, rf_test_accuracy) %>% 
-      mutate(Models = models) %>% 
-      select(c(Models, Accuracy))
+      mutate(Models = models, Accuracy_New = Accuracy*100) %>% 
+      select(c(Models, Accuracy_New)) %>% 
+      rename(Accuracy = Accuracy_New)
     output$test <- renderTable(test_accuracy, align = "c")
     output$logregstats <- renderPrint(logreg)
     output$gbmstats <- renderPrint(gbm)
@@ -232,9 +236,30 @@ shinyServer(function(input, output, session) {
     output$varimpgbm <- renderPlot({
       plot(varImp(gbm, scale = FALSE))
     })
+    output$cmlogreg <- renderPrint(confusionMatrix(logreg_tree_pred, obeseTest$obesityLevel))
+    output$cmgbm <- renderPrint(confusionMatrix(boosted_tree_pred, obeseTest$obesityLevel))
+    output$cmrf <- renderPrint(confusionMatrix(rf_tree_pred, obeseTest$obesityLevel))
     })
+    })
+    
+    observeEvent(input$predict, {
+      gbmGrid <-  expand.grid(interaction.depth = gbm$bestTune$interaction.depth,
+                              n.trees = gbm$bestTune$n.trees,
+                              shrinkage = gbm$bestTune$shrinkage,
+                              n.minobsinnode = gbm$bestTune$n.minobsinnode)
+      finalGbm <- train(x=dplyr::select(obesity_df, -"NObeyesdad"), y= obesity_df$NObeyesdad,
+            method = 'gbm',
+            trControl = trControl,
+            tuneGrid = gbmGrid,
+            verbose = FALSE)
+
+      gbm_pred <- predict(finalGbm, new_data = , type = "raw")
+
+
   })
-  
-  
+    
 })
+  
+  
+
 

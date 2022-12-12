@@ -796,6 +796,7 @@ predict_input <- data.frame(Gender = "Female",
 # 
 # predict(gbm.CV, new_data = head(obesity_df,5))
 
+shinyApp(ui = ui, server = server)
 
 
 

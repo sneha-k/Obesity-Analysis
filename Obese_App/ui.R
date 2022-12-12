@@ -268,7 +268,72 @@ shinyUI(fluidPage(theme = shinytheme("flatly"),
                                                    )))),
                              tabPanel("Data Modelling",
                                       tabsetPanel(id = "model",
-                                        tabPanel("Modelling Info", value = "MI"),
+                                        tabPanel("Modelling Info", value = "MI",
+                                                 br(),
+                                                 p("The problem statement of predicting Obesity is a classification problem. We are trying to categorize a young adults into the WHO approved Obesity classes based on their lifestyle and contributing factors.
+                                                   The three models that we used for training and prediction are Generalized Linear Model(Logistic Regression), Gradient Boosting, and Random Forest. Let us take a moment to 
+                                                   understand these machine learning models better."),
+                                                 h3("Logistic Regression"),
+                                                 p("This type of statistical model (also known as logit model) is often used for classification and predictive analytics. Logistic regression estimates the probability of an event occurring, 
+                                                   such as voted or didn’t vote, based on a given dataset of independent variables. Since the outcome is a probability, the dependent variable is bounded between 0 and 1. 
+                                                   In logistic regression, a logit transformation is applied on the odds—that is, the probability of success divided by the probability of failure. This is also commonly known as the 
+                                                   log odds, or the natural logarithm of odds, and this logistic function is represented by the following formulas"),
+                                                 uiOutput("ex1"),
+                                                 p("Multinomial logistic regression is an extension of logistic regression that adds native support for multi-class classification problems. Logistic regression, by default, 
+                                                 is limited to two-class classification problems. Some extensions like one-vs-rest can allow logistic regression to be used for multi-class classification problems, although they require that the classification problem 
+                                                   first be transformed into multiple binary classification problems.Instead, the multinomial logistic regression algorithm is an extension to the logistic regression model that involves changing the loss function to cross-entropy loss 
+                                                   and predict probability distribution to a multinomial probability distribution to natively support multi-class classification problems. The multinomal logistic regression is more appropriate in our case since we have more than two classes of obesity."),
+                                                 p("Advantages of Logistic Regression are: "),
+                                                 tags$ul(
+                                                   tags$li("Logistic regression is easier to implement, interpret, and very efficient to train."),
+                                                   tags$li("It makes no assumptions about distributions of classes in feature space."),
+                                                   tags$li("It can easily extend to multiple classes(multinomial regression) and a natural probabilistic view of class predictions.")
+                                                 ),
+                                                 p("Disadvantages of Logistic Regression are: "),
+                                                 tags$ul(
+                                                   tags$li("If the number of observations is lesser than the number of features, Logistic Regression should not be used, otherwise, it may lead to overfitting."),
+                                                   tags$li("The major limitation of Logistic Regression is the assumption of linearity between the dependent variable and the independent variables."),
+                                                   tags$li("Logistic Regression requires average or no multicollinearity between independent variables.")
+                                                 ),
+                                                 br(),
+                                                 h3("Gradient Boosting"),
+                                                 p("Boosting is a class of ensamble learning techniques for regression and classification problems. Boosting aims to build a set of weak learners (i.e. predictive models that are only slightly better than random chance) to create one ‘strong’ 
+                                                   learner (i.e. a predictive model that predicts the response variable with a high degree of accuracy). Gradient Boosting is a boosting method which aims to optimise an arbitrary (differentiable) cost function (for example, squared error)."),
+                                                 p("Basically, this algorithm is an iterative process in which you follow the following steps:"),
+                                                 tags$ol(
+                                                   tags$li("Fit a model to the data (in the first iteration this is usually a constant): F(1)x = y"),
+                                                   tags$li("Fit a new model to the residuals: h1(x) = y-F1(x)"),
+                                                   tags$li("Create a new model: F2(x) = F1(x)+h1(x)"),
+                                                   tags$li("Repeat steps 2 & 3")),
+                                                 p("It should be evident to see that as the algorithm moves through multiple iterations, the model continually gets stronger. Also, it should be noted that the type of model used in gradient boosting is not restrictive (i.e. it can be anything), 
+                                                   however in practice they tend to be shallow decision trees."),
+                                                 p("Gradient Boosting has three main components:"),
+                                                 tags$ul(
+                                                   tags$li("Loss Function)- The role of the loss function is to estimate how good the model is at making predictions with the given data. This could vary depending on the problem at hand. For example, if we're trying to predict the weight of a person 
+                                                           depending on some input variables (a regression problem), then the loss function would be something that helps us find the difference between the predicted weights and the observed weights. On the other hand, if we're trying to categorize 
+                                                           if a person will like a certain movie based on their personality, we'll require a loss function that helps us understand how accurate our model is at classifying people who did or didn't like certain movies."),
+                                                   tags$li("Weak Learner - A weak learner is one that classifies our data but does so poorly, perhaps no better than random guessing. In other words, it has a high error rate. These are typically decision trees (also called decision stumps, because they are less 
+                                                           complicated than typical decision trees)."),
+                                                   tags$li("Additive Model - This is the iterative and sequential approach of adding the trees (weak learners) one step at a time. After each iteration, we need to be closer to our final model. In other words, each iteration should reduce the value of our loss function.")
+                                                 ),
+                                                 p("Advantages of Gradient Boosting are: "),
+                                                 tags$ul(
+                                                   tags$li("Often provides predictive accuracy that cannot be trumped."),
+                                                   tags$li("Lots of flexibility - can optimize on different loss functions and provides several hyper parameter tuning options that make the function fit very flexible."),
+                                                   tags$li("No data pre-processing required - often works great with categorical and numerical values as is."),
+                                                   tags$li("Handles missing data - imputation not required.")
+                                                 ),
+                                                 p("Disadvantages of Gradient Boosting are: "),
+                                                 tags$ul(
+                                                   tags$li("Gradient Boosting Models will continue improving to minimize all errors. This can overemphasize outliers and cause overfitting."),
+                                                   tags$li("Computationally expensive - often require many trees (>1000) which can be time and memory exhaustive."),
+                                                   tags$li("The high flexibility results in many parameters that interact and influence heavily the behavior of the approach (number of iterations, tree depth, regularization parameters, etc.). This requires a large grid search during tuning."),
+                                                   tags$li("Loss of interpretation.")
+                                                 ),
+                                                 ),
+                                        
+                                        
+                                        
                                         tabPanel("Model Fitting", value = "MF",
                                                  # Sidebar layout with input and output definitions ----
                                                  sidebarLayout(
@@ -324,7 +389,7 @@ shinyUI(fluidPage(theme = shinytheme("flatly"),
                                                      p(strong("Random Forest Hyperparameter Tuning:")),
                                                      sliderInput("rftune1", "Max Number of variables randomly sampled as candidates at each split", 
                                                                  value = 2, 
-                                                                 min = 5, 
+                                                                 min = 2, 
                                                                  max = 20,
                                                                  step = 1),
                                                      actionButton("build", "Let's get training!")
@@ -413,7 +478,8 @@ shinyUI(fluidPage(theme = shinytheme("flatly"),
                                                                "Automobile" = "Automobile",
                                                                "Motorbike" = "Motorbike",
                                                                "Bike" = "Bike")),
-                                                 actionButton("predict", "Let's get predicting!")
+                                                 actionButton("predict", "Let's get predicting!"),
+                                                 mainPanel(verbatimTextOutput("predoutput"))
                                                  ))
                   
                   

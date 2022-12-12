@@ -79,7 +79,6 @@ gbm_model <- function(obeseTrain, interaction.depth, n.trees, shrinkage, n.minob
 }
 
 
-
 randomforest_model <- function(obeseTrain, mtry){
   tuneGrid = expand.grid(.mtry=seq(5,mtry))
   return(train(x=obeseTrain[-1], y= obeseTrain$obesityLevel, 
@@ -88,14 +87,15 @@ randomforest_model <- function(obeseTrain, mtry){
                   tuneGrid = tuneGrid))
 }
 
-# gbmGrid <-  expand.grid(interaction.depth = c(1, 2, 3, 4, 5, 6, 7, 8),
-#                         n.trees = c(25, 50, 100, 150, 200, 250, 300),
+# gbmGrid <-  expand.grid(interaction.depth = c(1, 2),
+#                         n.trees = c(25, 50),
 #                         shrinkage = 0.1,
-#                         n.minobsinnode = c(5, 10, 15, 20))
-# gbm.CV <- train(x=obeseTrain[-1]  , y= obeseTrain$obesityLevel,
-#                 method = 'gbm',
+#                         n.minobsinnode = c(5, 10))
+
+# gbm.CV <- train(x=dplyr::select(obesity_df, -"NObeyesdad"), y= obesity_df$NObeyesdad,
+#                 method = 'rf',
 #                 trControl = trControl,
-#                 tuneGrid = gbmGrid)
+#                 data)
 
 
 # data subset 
@@ -243,6 +243,23 @@ shinyServer(function(input, output, session) {
     })
     
     observeEvent(input$predict, {
+      predict_input <- data.frame(input$sex, 
+        as.numeric(input$age),
+        as.numeric(input$height),
+        as.numeric(input$weight),
+        input$family_history_with_overweight,
+        input$FAVC,
+        input$FCVC,
+        input$NCP,
+        input$CAEC,
+        input$SMOKE,
+        input$CH20,
+        input$SCC,
+        input$FAF,
+        input$TUE,
+        input$CALC,
+        input$MTRANS)
+      
       gbmGrid <-  expand.grid(interaction.depth = gbm$bestTune$interaction.depth,
                               n.trees = gbm$bestTune$n.trees,
                               shrinkage = gbm$bestTune$shrinkage,
@@ -253,13 +270,47 @@ shinyServer(function(input, output, session) {
             tuneGrid = gbmGrid,
             verbose = FALSE)
 
-      gbm_pred <- predict(finalGbm, new_data = , type = "raw")
-
-
+      gbm_pred <- predict(finalGbm, new_data = predict_input, type = "raw")
+      output$predoutput <- renderPrint(gbm_pred)
   })
+    
+    output$ex1 <- renderUI({
+      withMathJax(helpText('$$\\frac{1}{1+e^{-(\\beta_0+\\beta_1*x)}}$$'))
+    })
     
 })
   
-  
 
+predict_input <- data.frame(Gender = "Female",
+                            Age = 25,
+                            Height = 1.7,
+                            Weight = 67,
+                            family_history_with_overweight = "yes",
+                            FAVC = "no",
+                            FCVC = 2,
+                            NCP = 3,
+                            CAEC = "Sometimes",
+                            SMOKE = "no",
+                            CH2O = 2,
+                            SCC = "no",
+                            FAF = 0,
+                            TUE = 1,
+                            CALC = "no",
+                            MTRANS = "Public_Transportation")
+
+# predict_input$Gender <- factor(predict_input$Gender)
+# predict_input$family_history_with_overweight <- factor(predict_input$family_history_with_overweight)
+# predict_input$FAVC <- factor(predict_input$FAVC)
+# predict_input$FCVC <- factor(round(predict_input$FCVC))
+# predict_input$NCP <- factor(round(predict_input$NCP))
+# predict_input$CAEC <- factor(predict_input$CAEC)
+# predict_input$SMOKE <- factor(predict_input$SMOKE)
+# predict_input$CH2O <- factor(round(predict_input$CH2O))
+# predict_input$SCC <- factor(predict_input$SCC)
+# predict_input$FAF <- factor(round(predict_input$FAF))
+# predict_input$TUE <- factor(round(predict_input$TUE))
+# predict_input$CALC <- factor(predict_input$CALC)
+# predict_input$MTRANS <- factor(predict_input$MTRANS)
+# 
+# predict(gbm.CV, new_data = head(obesity_df,5))
 

@@ -58,19 +58,19 @@ trControl <- trainControl(method = 'repeatedcv',
                           search = 'random')
 
 logreg_model <- function(obeseTrain){
-  return(train(x=obeseTrain, y= obeseTrain$obesityLevel, 
+  return(train(x=obeseTrain[-1], y= obeseTrain$obesityLevel, 
                     method = 'glmnet',
                     trControl = trControl,
                     family = 'multinomial'))
 }
 
 gbm_model <- function(obeseTrain, interaction.depth, n.trees, shrinkage, n.minobsinnode){
-  gbmGrid <-  expand.grid(interaction.depth = interaction.depth, 
-                          n.trees = n.trees, 
+  gbmGrid <-  expand.grid(interaction.depth = seq(2, interaction.depth), 
+                          n.trees = seq(20,n.trees), 
                           shrinkage = shrinkage,
-                          n.minobsinnode = n.minobsinnode)
+                          n.minobsinnode = seq(1,n.minobsinnode))
   
-  return(train(x=obeseTrain, y= obeseTrain$obesityLevel, 
+  return(train(x=obeseTrain[-1], y= obeseTrain$obesityLevel, 
                     method = 'gbm',
                     trControl = trControl,
                     tuneGrid = gbmGrid,
@@ -78,11 +78,11 @@ gbm_model <- function(obeseTrain, interaction.depth, n.trees, shrinkage, n.minob
 }
 
 randomforest_model <- function(obeseTrain, mtry){
-  mtry_list <-  mtry
-  return(train(x=obeseTrain, y= obeseTrain$obesityLevel, 
+  tuneGrid = expand.grid(.mtry=seq(5,mtry))
+  return(train(x=obeseTrain[-1], y= obeseTrain$obesityLevel, 
                   method = 'rf',
                   trControl = trControl,
-                  tuneGrid = rfGrid))
+                  tuneGrid = tuneGrid))
 }
 
 # gbmGrid <-  expand.grid(interaction.depth = c(1, 2, 3, 4, 5, 6, 7, 8),
@@ -182,11 +182,11 @@ shinyServer(function(input, output, session) {
     df_list <- model_split(obese_df_preproc, as.numeric(p))
     obeseTrain <- as_tibble(df_list[[1]])
     obeseTest <- as_tibble(df_list[[2]])
-    interaction.depth = input$boosttune1
-    n.trees = input$boosttune2
-    shrinkage = input$boosttune3
-    n.minobsinnode = input$boosttune4
-    mtry = input$rftune1
+    interaction.depth = as.numeric(input$boosttune1)
+    n.trees = as.numeric(input$boosttune2)
+    shrinkage = as.numeric(input$boosttune3)
+    n.minobsinnode = as.numeric(input$boosttune4)
+    mtry = as.numeric(input$rftune1)
     incProgress(17, detail = "Training Logistic Regression Model")
     output$train <- renderTable(obeseTrain)
     logreg = logreg_model(obeseTrain)
@@ -206,14 +206,32 @@ shinyServer(function(input, output, session) {
     rf_test_accuracy <- postResample(pred = rf_tree_pred, obs = obeseTest$obesityLevel)
     incProgress(100, detail = "All done!")
     models <- c("Logistic Regression", "Gradient Boost Model", "Random Forest")
-    train_accuracy <- c(logreg$results$Accuracy[which.max(logreg$results$Accuracy)],
-                        gbm$results$Accuracy[which.max(gbm$results$Accuracy)],
-                        rf$results$Accuracy[which.max(rf$results$Accuracy)])
+    train_accuracy <- c(logreg$results$Accuracy[which.max(logreg$results$Accuracy)]*100,
+                        gbm$results$Accuracy[which.max(gbm$results$Accuracy)]*100,
+                        rf$results$Accuracy[which.max(rf$results$Accuracy)]*100)
+    train_accuracy <- tibble(Accuracy = train_accuracy) %>% 
+      mutate(Models = models) %>% 
+      select(Models, everything())
+    
     output$train <- renderTable(train_accuracy, align = "c")
     test_accuracy <- logreg_test_accuracy %>%
-      bind_rows(boosted_test_accuracy, rf_test_accuracy) %>%
-      bind_cols(models)
+      bind_rows(boosted_test_accuracy, rf_test_accuracy) %>% 
+      mutate(Models = models) %>% 
+      select(c(Models, Accuracy))
     output$test <- renderTable(test_accuracy, align = "c")
+    output$logregstats <- renderPrint(logreg)
+    output$gbmstats <- renderPrint(gbm)
+    output$rfstats <- renderPrint(rf)
+    
+    output$varimplogreg <- renderPlot({
+      plot(varImp(logreg, scale = FALSE))
+    })
+    output$varimprf <- renderPlot({
+      plot(varImp(rf, scale = FALSE))
+    })
+    output$varimpgbm <- renderPlot({
+      plot(varImp(gbm, scale = FALSE))
+    })
     })
   })
   

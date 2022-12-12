@@ -16,6 +16,7 @@ library(caret)
 library(shinythemes)
 library(shinyjs)
 library(shinycssloaders)
+library(gbm)
 
 
 # Define UI for application that draws a histogram
@@ -322,17 +323,95 @@ shinyUI(fluidPage(theme = shinytheme("flatly"),
                                                                  step = 5),
                                                      p(strong("Random Forest Hyperparameter Tuning:")),
                                                      sliderInput("rftune1", "Max Number of variables randomly sampled as candidates at each split", 
-                                                                 value = 5, 
-                                                                 min = 1, 
+                                                                 value = 2, 
+                                                                 min = 5, 
                                                                  max = 20,
                                                                  step = 1),
                                                      actionButton("build", "Let's get training!")
                                                      ),
                                                    mainPanel(
-                                                     tableOutput("train_accuracy"),
-                                                     tableOutput("test_accuracy")
+                                                     fluidRow(
+                                                       column(width = 6,
+                                                              h4("Train Accuracy"),
+                                                              tableOutput("train")),
+                                                       column(width = 6,
+                                                              h4("Test Accuracy"),
+                                                              tableOutput("test"))),
+                                                     tabsetPanel(id = "summarystats",
+                                                                 tabPanel("Logistic Regression",
+                                                                          verbatimTextOutput("logregstats"),
+                                                                          plotOutput("varimplogreg")),
+                                                                 tabPanel("Gradient Boosting",
+                                                                          verbatimTextOutput("gbmstats"),
+                                                                          plotOutput("varimpgbm")),
+                                                                 tabPanel("Random Forest",
+                                                                          verbatimTextOutput("rfstats"),
+                                                                          plotOutput("varimprf")))
                                                    ))),
-                                        tabPanel("Prediction"))
+                                        tabPanel("Prediction",
+                                                 selectInput("sex", "Gender:",
+                                                             c("Male" = "Male",
+                                                               "Female" = "Female")),
+                                                 textInput("age", "Age", "25"),
+                                                 textInput("height", "Height", "1.5"),
+                                                 textInput("weight", "Weight", "55"),
+                                                 selectInput("family_history_with_overweight", "Family History with Obesity?",
+                                                             c("yes" = "yes",
+                                                               "no" = "no")),
+                                                 selectInput("FAVC", "FAVC",
+                                                             c("yes" = "yes",
+                                                               "no" = "no")),
+                                                 selectInput("FCVC", "FCVC",
+                                                             c("1" = "1",
+                                                               "2" = "2",
+                                                               "3" = "3")),
+                                                 selectInput("NCP", "NCP",
+                                                             c("1" = "1",
+                                                               "2" = "2",
+                                                               "3" = "3",
+                                                               "4" = "4")),
+                                                 selectInput("CAEC", "CAEC",
+                                                             c("Sometimes" = "Sometimes",
+                                                               "Frequently" = "Frequently",
+                                                               "Always" = "Always",
+                                                               "No" = "No")),
+                                                 selectInput("SMOKE", "SMOKE",
+                                                             c("no" = "no",
+                                                               "yes" = "yes"
+                                                               )),
+                                                 selectInput("CH20", "CH20",
+                                                             c("1" = "1",
+                                                               "2" = "2",
+                                                               "3" = "3"
+                                                             )),
+                                                 selectInput("SCC", "SCC",
+                                                             c("no" = "no",
+                                                               "yes" = "yes"
+                                                             )),
+                                                 selectInput("FAF", "FAF",
+                                                             c("0" = "0",
+                                                               "1" = "1",
+                                                               "2" = "2",
+                                                               "3" = "3"
+                                                             )),
+                                                 selectInput("TUE", "TUE",
+                                                             c("0" = "0",
+                                                               "1" = "1",
+                                                               "2" = "2"
+                                                             )),
+                                                 selectInput("CALC", "CALC",
+                                                             c("Sometimes" = "Sometimes",
+                                                               "Frequently" = "Frequently",
+                                                               "Always" = "Always",
+                                                               "No" = "No")),
+                                                 selectInput("MTRANS", "MTRANS",
+                                                             c("Public_Transportation" = "Public_Transportation",
+                                                               "Walking" = "Walking",
+                                                               "Automobile" = "Automobile",
+                                                               "Motorbike" = "Motorbike",
+                                                               "Bike" = "Bike")),
+                                                 actionButton("predict", "Let's get predicting!")
+                                                 ))
                   
                   
 )

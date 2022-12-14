@@ -228,7 +228,7 @@ shinyUI(fluidPage(theme = shinytheme("flatly"),
                                                        plotOutput("scatter")),
                                                      conditionalPanel(
                                                        condition = "input.type1 =='corr' && input1.type1 != 'dist' && input.type1 != 'scatter'",
-                                                       plotOutput("corr"))
+                                                       verbatimTextOutput("corr"))
                                                    ))
                                                  ),
                                         tabPanel("Categorical Summaries",

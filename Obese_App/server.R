@@ -52,7 +52,6 @@ model_split <- function(obese_df_preproc, p){
   return(list(obeseTrain, obeseTest))
 }
 
-
 trControl <- trainControl(method = 'repeatedcv',
                           number = 3,
                           repeats =  3,
@@ -77,7 +76,6 @@ gbm_model <- function(obeseTrain, interaction.depth, n.trees, shrinkage, n.minob
                     tuneGrid = gbmGrid,
                   verbose = FALSE))
 }
-
 
 randomforest_model <- function(obeseTrain, mtry){
   tuneGrid = expand.grid(.mtry=seq(5,mtry))
@@ -243,7 +241,7 @@ shinyServer(function(input, output, session) {
     })
     
     observeEvent(input$predict, {
-      predict_input <- data.frame(input$sex, 
+      predict_input <- eventReactive({data.frame(input$sex, 
         as.numeric(input$age),
         as.numeric(input$height),
         as.numeric(input$weight),
@@ -258,45 +256,51 @@ shinyServer(function(input, output, session) {
         input$FAF,
         input$TUE,
         input$CALC,
-        input$MTRANS)
-      
-      gbmGrid <-  expand.grid(interaction.depth = gbm$bestTune$interaction.depth,
+        input$MTRANS)})
+
+      gbmGrid <-  reactive({expand.grid(interaction.depth = gbm$bestTune$interaction.depth,
                               n.trees = gbm$bestTune$n.trees,
                               shrinkage = gbm$bestTune$shrinkage,
-                              n.minobsinnode = gbm$bestTune$n.minobsinnode)
+                              n.minobsinnode = gbm$bestTune$n.minobsinnode)})
+
       finalGbm <- train(x=dplyr::select(obesity_df, -"NObeyesdad"), y= obesity_df$NObeyesdad,
             method = 'gbm',
             trControl = trControl,
-            tuneGrid = gbmGrid,
+            tuneGrid = gbmGrid(),
             verbose = FALSE)
 
-      gbm_pred <- predict(finalGbm, new_data = predict_input, type = "raw")
-      output$predoutput <- renderPrint(gbm_pred)
+      gbm_pred <- predict(finalGbm, new_data = predict_input(), type = "raw")
+      #output$predoutput <- renderPrint(gbmGrid())
+      #output$predoutput <- renderTable(predict_input())
   })
     
     output$ex1 <- renderUI({
       withMathJax(helpText('$$\\frac{1}{1+e^{-(\\beta_0+\\beta_1*x)}}$$'))
     })
     
+    output$ex2 <- renderUI({
+      withMathJax(helpText('$$ni_j = w_jC_j - w_{left}(j)C_{left(j)} = w_{right(j)}C_{right(j)}$$'))
+    })
+    
 })
   
-
-predict_input <- data.frame(Gender = "Female",
-                            Age = 25,
-                            Height = 1.7,
-                            Weight = 67,
-                            family_history_with_overweight = "yes",
-                            FAVC = "no",
-                            FCVC = 2,
-                            NCP = 3,
-                            CAEC = "Sometimes",
-                            SMOKE = "no",
-                            CH2O = 2,
-                            SCC = "no",
-                            FAF = 0,
-                            TUE = 1,
-                            CALC = "no",
-                            MTRANS = "Public_Transportation")
+# 
+# predict_input <- data.frame(Gender = "Female",
+#                             Age = 25,
+#                             Height = 1.7,
+#                             Weight = 67,
+#                             family_history_with_overweight = "yes",
+#                             FAVC = "no",
+#                             FCVC = 2,
+#                             NCP = 3,
+#                             CAEC = "Sometimes",
+#                             SMOKE = "no",
+#                             CH2O = 2,
+#                             SCC = "no",
+#                             FAF = 0,
+#                             TUE = 1,
+#                             CALC = "no",
+#                             MTRANS = "Public_Transportation")
 
 # predict_input$Gender <- factor(predict_input$Gender)
 # predict_input$family_history_with_overweight <- factor(predict_input$family_history_with_overweight)

@@ -330,7 +330,36 @@ shinyUI(fluidPage(theme = shinytheme("flatly"),
                                                    tags$li("The high flexibility results in many parameters that interact and influence heavily the behavior of the approach (number of iterations, tree depth, regularization parameters, etc.). This requires a large grid search during tuning."),
                                                    tags$li("Loss of interpretation.")
                                                  ),
+                                                 h3("Random Forest"),
+                                                 p("Random forest is a Supervised Machine Learning Algorithm that is used widely in Classification and Regression problems. It builds decision trees on different samples and takes their majority vote for classification and average in case of regression. 
+                                                   One of the most important features of the Random Forest Algorithm is that it can handle the data set containing continuous variables as in the case of regression and categorical variables as in the case of classification. It performs better results for classification problems."),
+                                                 p("Steps involved in random forest algorithm:"),
+                                                 p("Step 1: In Random forest n number of random records are taken from the data set having k number of records."),
+                                                 p("Step 2: Individual decision trees are constructed for each sample."),
+                                                 p("Step 3: Each decision tree will generate an output."),
+                                                 p("Step 4: Final output is considered based on Majority Voting or Averaging for Classification and regression respectively."),
+                                                 p("For each decision tree, calculating a nodes importance using Gini Importance(if that is a metric used), assuming only two child nodes (binary tree):"),
+                                                 uiOutput("ex2"),
+                                                 p("where,"),
+                                                 tags$ul(
+                                                   tags$li("ni (j)= the importance of node j"),
+                                                   tags$li("w (j) = weighted number of samples reaching node j"),
+                                                   tags$li("C (j)= the impurity value of node j"),
+                                                   tags$li("left(j) = child node from left split on node j"),
+                                                   tags$li("right(j) = child node from right split on node j")
                                                  ),
+                                                 p("Advantages of Random Forest are: "),
+                                                 tags$ul(
+                                                   tags$li("Random Forest is based on the bagging algorithm and uses Ensemble Learning technique. It creates as many trees on the subset of the data and combines the output of all the trees. In this way it reduces overfitting problem in decision trees and also reduces the variance and therefore improves the accuracy."),
+                                                   tags$li("Random Forest can be used to solve both classification as well as regression problems."),
+                                                   tags$li("Random Forest works well with both categorical and continuous variables."),
+                                                   tags$li("Handles missing data - imputation not required,  No feature scaling required, and robust to outliers.")
+                                                 ),
+                                                 p("Disadvantages of Random Forest are: "),
+                                                 tags$ul(
+                                                   tags$li("Computationally expensive - often require many trees (>1000) which can be time and memory exhaustive."),
+                                                   tags$li("Longer training period.")
+                                                 )),
                                         
                                         
                                         

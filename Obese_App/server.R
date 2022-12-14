@@ -140,7 +140,6 @@ shinyServer(function(input, output, session) {
         aes(x = !!sym(input$var1), y = !!sym(input$var2), colour = NObeyesdad) +
         geom_point(shape = "circle", size = 1.5) +
         scale_color_hue(direction = 1) +
-        ggtitle(paste0(input$var1, "vs", input$var2)) +
         theme_minimal() 
     })
     }
@@ -150,19 +149,15 @@ shinyServer(function(input, output, session) {
   if(input$type1 == "corr"){
     cormat <- round(cor(obesity_df[,c("Height", "Age", "Weight")]),2)
     melted_cormat <- melt(cormat)
-    output$corr <- renderPlot({
-      ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value))
-      
-  })
+    output$corr <- renderPrint({cormat})
   }
   })
   
   output$catplot1 <- renderPlot({
     ggplot(obesity_df) +
       aes(x = !!sym(input$type3), y = !!sym(input$type2)) +
-      geom_boxplot(fill = "#112446") +
+      geom_boxplot(fill = "#69b3a2") +
       coord_flip() +
-      ggtitle(paste0("Count of", input$type3, "by", input$type2)) +
       theme_minimal()
   })
   
@@ -179,7 +174,6 @@ shinyServer(function(input, output, session) {
       aes(x = !!sym(input$type3), y = !!sym(input$type2), fill = NObeyesdad) +
       geom_boxplot() +
       scale_fill_hue(direction = 1) +
-      ggtitle(paste0("Count of", input$type3, "by", input$type2)) +
       theme_minimal()
   })
   

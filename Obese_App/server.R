@@ -33,13 +33,18 @@ obesity_df$MTRANS <- factor(obesity_df$MTRANS)
 obesity_df$NObeyesdad <- factor(obesity_df$NObeyesdad)
 
 preprocessing <- function(model_variables) {
-  model_var_obesedf = obesity_df[, model_variables, drop = FALSE]
-  model_var_obesedf <- cbind(NObeyesdad = obesity_df$NObeyesdad, model_var_obesedf)
-  dummy_obesity <- dummyVars(NObeyesdad~ ., data = model_var_obesedf)
-  dummy_obesity_ml <- as_tibble(predict(dummy_obesity, newdata = model_var_obesedf))
-  dummy_obesity_ml <- cbind(obesityLevel = obesity_df$NObeyesdad, dummy_obesity_ml)
-  preProcValues <- preProcess(dummy_obesity_ml, method = c("center", "scale"))
-  obeseDfTransformed <- predict(preProcValues, dummy_obesity_ml)
+  if (length(model_variables)!=0) {
+    model_var_obesedf = obesity_df[, model_variables, drop = FALSE]
+  }
+  else {
+    model_var_obesedf <- obesity_df %>% select(-any_of("NObeyesdad"))
+  }
+    model_var_obesedf <- cbind(NObeyesdad = obesity_df$NObeyesdad, model_var_obesedf)
+    dummy_obesity <- dummyVars(NObeyesdad~ ., data = model_var_obesedf)
+    dummy_obesity_ml <- as_tibble(predict(dummy_obesity, newdata = model_var_obesedf))
+    dummy_obesity_ml <- cbind(obesityLevel = obesity_df$NObeyesdad, dummy_obesity_ml)
+    preProcValues <- preProcess(dummy_obesity_ml, method = c("center", "scale"))
+    obeseDfTransformed <- predict(preProcValues, dummy_obesity_ml)
   return(obeseDfTransformed)
 }
 
@@ -79,7 +84,7 @@ gbm_model <- function(obeseTrain, interaction.depth, n.trees, shrinkage, n.minob
 
 randomforest_model <- function(obeseTrain, mtry){
   tuneGrid = expand.grid(.mtry=seq(5,mtry))
-  return(train(x=obeseTrain[-1], y= obeseTrain$obesityLevel, 
+  return(train(x=obeseTrain %>% select(-c("obesityLevel")), y= obeseTrain$obesityLevel, 
                   method = 'rf',
                   trControl = trControl,
                   tuneGrid = tuneGrid))
@@ -135,6 +140,7 @@ shinyServer(function(input, output, session) {
         aes(x = !!sym(input$var1), y = !!sym(input$var2), colour = NObeyesdad) +
         geom_point(shape = "circle", size = 1.5) +
         scale_color_hue(direction = 1) +
+        ggtitle(paste0(input$var1, "vs", input$var2)) +
         theme_minimal() 
     })
     }
@@ -145,8 +151,8 @@ shinyServer(function(input, output, session) {
     cormat <- round(cor(obesity_df[,c("Height", "Age", "Weight")]),2)
     melted_cormat <- melt(cormat)
     output$corr <- renderPlot({
-      ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value)) + 
-      geom_tile()
+      ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value))
+      
   })
   }
   })
@@ -156,6 +162,7 @@ shinyServer(function(input, output, session) {
       aes(x = !!sym(input$type3), y = !!sym(input$type2)) +
       geom_boxplot(fill = "#112446") +
       coord_flip() +
+      ggtitle(paste0("Count of", input$type3, "by", input$type2)) +
       theme_minimal()
   })
   
@@ -172,44 +179,47 @@ shinyServer(function(input, output, session) {
       aes(x = !!sym(input$type3), y = !!sym(input$type2), fill = NObeyesdad) +
       geom_boxplot() +
       scale_fill_hue(direction = 1) +
+      ggtitle(paste0("Count of", input$type3, "by", input$type2)) +
       theme_minimal()
   })
+  
+  values <- reactiveValues(df_list = NULL, rf.fit=NULL)
+  
   
   observeEvent(input$build, {
     withProgress(message = "Model Building", value = 0, {
     model_variables <- c(input$variable1)
     obese_df_preproc = preprocessing(model_variables)
     p = input$split
-    df_list <- model_split(obese_df_preproc, as.numeric(p))
-    obeseTrain <- as_tibble(df_list[[1]])
-    obeseTest <- as_tibble(df_list[[2]])
+    values$df_list <- model_split(obese_df_preproc, as.numeric(p))
+    obeseTrain <- as_tibble(values$df_list[[1]])
+    obeseTest <- as_tibble(values$df_list[[2]])
     interaction.depth = as.numeric(input$boosttune1)
     n.trees = as.numeric(input$boosttune2)
     shrinkage = as.numeric(input$boosttune3)
     n.minobsinnode = as.numeric(input$boosttune4)
     mtry = as.numeric(input$rftune1)
     incProgress(17, detail = "Training Logistic Regression Model")
-    output$train <- renderTable(obeseTrain)
-    logreg = logreg_model(obeseTrain)
+    logreg.fit = logreg_model(obeseTrain)
     incProgress(34, detail = "Logistic Regression Model Built")
     incProgress(35, detail = "Training Gradient Boosting Model")
-    gbm = gbm_model(obeseTrain, interaction.depth, n.trees, shrinkage, n.minobsinnode)
+    gbm.fit = gbm_model(obeseTrain, interaction.depth, n.trees, shrinkage, n.minobsinnode)
     incProgress(60, detail = "Gradient Boosting Model Built")
     incProgress(62, detail = "Training Random Forest Model")
-    rf = randomforest_model(obeseTrain, mtry)
+    values$rf.fit = randomforest_model(obeseTrain, mtry)
     incProgress(90, detail = "Random Forest Model Built")
     incProgress(91, detail = "Getting Statistics...")
-    boosted_tree_pred <- predict(gbm, dplyr::select(obeseTest, -"obesityLevel"), type = "raw")
-    logreg_tree_pred <- predict(logreg, dplyr::select(obeseTest, -"obesityLevel"), type = "raw")
-    rf_tree_pred <- predict(rf, dplyr::select(obeseTest, -"obesityLevel"), type = "raw")
+    boosted_tree_pred <- predict(gbm.fit, dplyr::select(obeseTest, -"obesityLevel"), type = "raw")
+    logreg_tree_pred <- predict(logreg.fit, dplyr::select(obeseTest, -"obesityLevel"), type = "raw")
+    rf_tree_pred <- predict(values$rf.fit, dplyr::select(obeseTest, -"obesityLevel"), type = "raw")
     logreg_test_accuracy <- postResample(pred = logreg_tree_pred, obs = obeseTest$obesityLevel)
     boosted_test_accuracy <- postResample(pred = logreg_tree_pred, obs = obeseTest$obesityLevel)
     rf_test_accuracy <- postResample(pred = rf_tree_pred, obs = obeseTest$obesityLevel)
     incProgress(100, detail = "All done!")
     models <- c("Logistic Regression", "Gradient Boost Model", "Random Forest")
-    train_accuracy <- c(logreg$results$Accuracy[which.max(logreg$results$Accuracy)]*100,
-                        gbm$results$Accuracy[which.max(gbm$results$Accuracy)]*100,
-                        rf$results$Accuracy[which.max(rf$results$Accuracy)]*100)
+    train_accuracy <- c(logreg.fit$results$Accuracy[which.max(logreg.fit$results$Accuracy)]*100,
+                        gbm.fit$results$Accuracy[which.max(gbm.fit$results$Accuracy)]*100,
+                        values$rf.fit$results$Accuracy[which.max(values$rf.fit$results$Accuracy)]*100)
     train_accuracy <- tibble(Accuracy = train_accuracy) %>% 
       mutate(Models = models) %>% 
       select(Models, everything())
@@ -221,18 +231,18 @@ shinyServer(function(input, output, session) {
       select(c(Models, Accuracy_New)) %>% 
       rename(Accuracy = Accuracy_New)
     output$test <- renderTable(test_accuracy, align = "c")
-    output$logregstats <- renderPrint(logreg)
-    output$gbmstats <- renderPrint(gbm)
-    output$rfstats <- renderPrint(rf)
+    output$logregstats <- renderPrint(logreg.fit)
+    output$gbmstats <- renderPrint(gbm.fit)
+    output$rfstats <- renderPrint(values$rf.fit)
     
     output$varimplogreg <- renderPlot({
-      plot(varImp(logreg, scale = FALSE))
+      plot(varImp(logreg.fit, scale = FALSE))
     })
     output$varimprf <- renderPlot({
-      plot(varImp(rf, scale = FALSE))
+      plot(varImp(values$rf.fit, scale = FALSE))
     })
     output$varimpgbm <- renderPlot({
-      plot(varImp(gbm, scale = FALSE))
+      plot(varImp(gbm.fit, scale = FALSE))
     })
     output$cmlogreg <- renderPrint(confusionMatrix(logreg_tree_pred, obeseTest$obesityLevel))
     output$cmgbm <- renderPrint(confusionMatrix(boosted_tree_pred, obeseTest$obesityLevel))
@@ -240,8 +250,23 @@ shinyServer(function(input, output, session) {
     })
     })
     
+    a <- reactiveValues(result = NULL)
+  
     observeEvent(input$predict, {
-      predict_input <- eventReactive({data.frame(input$sex, 
+      obese_df_preproc = obesity_df %>% 
+        rename(obesityLevel = NObeyesdad)
+      p = 0.8
+      df_list <- model_split(obese_df_preproc, p)
+      obeseTrain <- as_tibble(df_list[[1]])
+      obeseTest <- as_tibble(df_list[[2]])
+      print(obeseTrain)
+      rf.final <- randomforest_model(obeseTrain, mtry = 6)
+      print("rf completed")
+      test_pred <- obeseTest %>% 
+        select(-c("obesityLevel"))
+      print("*****")
+      print(test_pred)
+      predict_input <- data.frame(input$sex, 
         as.numeric(input$age),
         as.numeric(input$height),
         as.numeric(input$weight),
@@ -256,23 +281,50 @@ shinyServer(function(input, output, session) {
         input$FAF,
         input$TUE,
         input$CALC,
-        input$MTRANS)})
+        input$MTRANS)
+      print(predict_input)
+      
+      print(length(colnames(test_pred)))
+      print(length(colnames(predict_input)))
+      
+      names(predict_input) <- names(test_pred)
+      
+      #Include the values into the new data
+      test_pred <- rbind(test_pred, predict_input)
+    
+      print("**binding done**")
+      a$result <-  predict(rf.final,
+                                 newdata = test_pred[nrow(test_pred),])
+      
+      showModal(modalDialog(
+        paste0("You are ",a$result,'.'),
+        easyClose = TRUE,
+        footer = NULL
+      ))
+                         
 
-      gbmGrid <-  reactive({expand.grid(interaction.depth = gbm$bestTune$interaction.depth,
-                              n.trees = gbm$bestTune$n.trees,
-                              shrinkage = gbm$bestTune$shrinkage,
-                              n.minobsinnode = gbm$bestTune$n.minobsinnode)})
+    })
+    
+    output$predoutput <- renderText({
+      #Display the prediction value
+      paste(a$result)
+    })
 
-      finalGbm <- train(x=dplyr::select(obesity_df, -"NObeyesdad"), y= obesity_df$NObeyesdad,
-            method = 'gbm',
-            trControl = trControl,
-            tuneGrid = gbmGrid(),
-            verbose = FALSE)
+      # gbmGrid <-  reactive({expand.grid(interaction.depth = gbm$bestTune$interaction.depth,
+      #                         n.trees = gbm$bestTune$n.trees,
+      #                         shrinkage = gbm$bestTune$shrinkage,
+      #                         n.minobsinnode = gbm$bestTune$n.minobsinnode)})
 
-      gbm_pred <- predict(finalGbm, new_data = predict_input(), type = "raw")
+      # finalGbm <- train(x=dplyr::select(obesity_df, -"NObeyesdad"), y= obesity_df$NObeyesdad,
+      #       method = 'gbm',
+      #       trControl = trControl,
+      #       tuneGrid = gbmGrid(),
+      #       verbose = FALSE)
+      
+
+      #gbm_pred <- predict(finalGbm, new_data = predict_input(), type = "raw")
       #output$predoutput <- renderPrint(gbmGrid())
       #output$predoutput <- renderTable(predict_input())
-  })
     
     output$ex1 <- renderUI({
       withMathJax(helpText('$$\\frac{1}{1+e^{-(\\beta_0+\\beta_1*x)}}$$'))
